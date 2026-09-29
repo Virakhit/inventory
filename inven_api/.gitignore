@@ -21,3 +21,4 @@ TestResults/
 coverage/
 *.coverage
 *.coveragexml
+inventory.db*

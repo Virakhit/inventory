@@ -1,6 +1,31 @@
-@inven_api_HostAddress = http://localhost:5126
+@host = http://localhost:5126
 
-GET {{inven_api_HostAddress}}/weatherforecast/
-Accept: application/json
+### OpenAPI document (Swagger UI: {{host}}/swagger)
+GET {{host}}/swagger/v1/swagger.json
 
-###
+### Create a category
+POST {{host}}/api/categories
+Content-Type: application/json
+
+{"categoryName":"Stationery"}
+
+### List categories
+GET {{host}}/api/categories
+
+### Create a product (replace categoryId with the returned UUID)
+POST {{host}}/api/products
+Content-Type: application/json
+
+{"categoryId":"00000000-0000-0000-0000-000000000001","productName":"Notebook","price":"75.00","cost":"50.00"}
+
+### List products
+GET {{host}}/api/products
+
+### Create a transaction (replace SKU and categoryID with returned values)
+POST {{host}}/api/transactions
+Content-Type: application/json
+
+{"type":"IN","date":"2026-09-29T00:00:00Z","reason":"Initial stock","items":[{"sku":"00000000-0000-0000-0000-000000000002","categoryId":"00000000-0000-0000-0000-000000000001"}]}
+
+### List transactions
+GET {{host}}/api/transactions
