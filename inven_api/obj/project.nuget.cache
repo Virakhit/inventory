@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "evEj4XLBr5g=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\verak\\Desktop\\testing\\inventory\\inven_api\\inven_api.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\verak\\.nuget\\packages\\microsoft.aspnetcore.openapi\\10.0.12\\microsoft.aspnetcore.openapi.10.0.12.nupkg.sha512",
+    "C:\\Users\\verak\\.nuget\\packages\\microsoft.openapi\\2.12.0\\microsoft.openapi.2.12.0.nupkg.sha512"
+  ],
+  "logs": []
+}
