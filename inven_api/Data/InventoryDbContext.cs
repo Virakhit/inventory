@@ -47,6 +47,8 @@ public class InventoryDbContext(DbContextOptions<InventoryDbContext> options) : 
             entity.Property(x => x.TransactionId).HasColumnName("transactionID");
             entity.Property(x => x.Sku).HasColumnName("SKU");
             entity.Property(x => x.CategoryId).HasColumnName("categoryID").IsRequired();
+            entity.Property(x => x.Qty).HasColumnName("qty").IsRequired();
+            entity.Property(x => x.Price).HasColumnName("price").HasColumnType("numeric(10,2)").IsRequired();
             entity.HasOne(x => x.Transaction).WithMany(x => x.Items).HasForeignKey(x => x.TransactionId);
             entity.HasOne(x => x.Product).WithMany(x => x.TransactionItems).HasForeignKey(x => x.Sku);
         });

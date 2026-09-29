@@ -37,7 +37,7 @@ type Transaction = {
   type: string;
   date: string;
   reason: string | null;
-  items: { idtransactionItemId: string; sku: string; categoryId: string }[];
+  items: { idtransactionItemId: string; sku: string; categoryId: string; qty: number; price: number }[];
 };
 type View = "overview" | "products" | "categories" | "transactions";
 type Dialog = "product" | "category" | "transaction" | null;
@@ -112,7 +112,7 @@ export default function Home() {
     type: "IN",
     date: new Date().toISOString().slice(0, 10),
     reason: "",
-    skus: [] as string[],
+    items: [] as { sku: string; qty: string; price: string }[],
   });
   const [mobileMenu, setMobileMenu] = useState(false);
 
@@ -169,10 +169,10 @@ export default function Home() {
   );
   const stockIn = transactions
     .filter((t) => t.type.toUpperCase() === "IN")
-    .reduce((n, t) => n + t.items.length, 0);
+    .reduce((n, t) => n + t.items.reduce((sum, item) => sum + item.qty, 0), 0);
   const stockOut = transactions
     .filter((t) => t.type.toUpperCase() === "OUT")
-    .reduce((n, t) => n + t.items.length, 0);
+    .reduce((n, t) => n + t.items.reduce((sum, item) => sum + item.qty, 0), 0);
 
   function openProduct(product?: Product) {
     setEditingProduct(product || null);
@@ -200,7 +200,7 @@ export default function Home() {
       type: "IN",
       date: new Date().toISOString().slice(0, 10),
       reason: "",
-      skus: [],
+      items: [],
     });
     setError("");
     setDialog("transaction");
@@ -252,14 +252,20 @@ export default function Home() {
   }
   async function saveTransaction(e: React.FormEvent) {
     e.preventDefault();
-    if (!transactionForm.skus.length) {
+    if (!transactionForm.items.length) {
       setError("เลือกสินค้าอย่างน้อยหนึ่งรายการ");
       return;
     }
-    const items = transactionForm.skus.map((sku) => ({
-      sku,
+    if (transactionForm.items.some((item) => !Number.isInteger(Number(item.qty)) || Number(item.qty) <= 0 || !/^\d+(\.\d{1,2})?$/.test(item.price) || Number(item.price) > 99999999.99)) {
+      setError("จำนวนต้องเป็นจำนวนเต็มมากกว่า 0 และราคาต้องอยู่ระหว่าง 0 ถึง 99,999,999.99");
+      return;
+    }
+    const items = transactionForm.items.map((item) => ({
+      sku: item.sku,
       categoryId:
-        products.find((p) => p.sku === sku)?.categoryId || "uncategorized",
+        products.find((p) => p.sku === item.sku)?.categoryId || "uncategorized",
+      qty: Number(item.qty),
+      price: Number(item.price),
     }));
     await run(
       () =>
@@ -476,7 +482,7 @@ export default function Home() {
                             </span>
                           </div>
                           <div className="activity-meta">
-                            <strong>{t.items.length} ชิ้น</strong>
+                            <strong>{t.items.reduce((sum, item) => sum + item.qty, 0)} ชิ้น</strong>
                             <span>{dateLabel(t.date)}</span>
                           </div>
                         </div>
@@ -745,10 +751,10 @@ export default function Home() {
                               </td>
                               <td>
                                 <div className="items-cell">
-                                  <strong>{t.items.length} ชิ้น</strong>
+                                  <strong>{t.items.reduce((sum, item) => sum + item.qty, 0)} ชิ้น</strong>
                                   <span>
                                     {t.items
-                                      .map((i) => productNameFor(i.sku))
+                                      .map((i) => `${productNameFor(i.sku)} × ${i.qty} (${money(i.price)})`)
                                       .join(", ")}
                                   </span>
                                 </div>
@@ -1022,14 +1028,14 @@ export default function Home() {
                         <label key={p.sku} className="picker-option">
                           <input
                             type="checkbox"
-                            checked={transactionForm.skus.includes(p.sku)}
+                            checked={transactionForm.items.some((item) => item.sku === p.sku)}
                             onChange={(e) =>
                               setTransactionForm({
                                 ...transactionForm,
-                                skus: e.target.checked
-                                  ? [...transactionForm.skus, p.sku]
-                                  : transactionForm.skus.filter(
-                                      (s) => s !== p.sku,
+                                items: e.target.checked
+                                  ? [...transactionForm.items, { sku: p.sku, qty: "1", price: p.price }]
+                                  : transactionForm.items.filter(
+                                      (item) => item.sku !== p.sku,
                                     ),
                               })
                             }
@@ -1046,9 +1052,20 @@ export default function Home() {
                       </p>
                     )}
                   </div>
-                  <p className="form-hint">
-                    สินค้าแต่ละรายการนับเป็น 1 ชิ้นต่อการบันทึก
-                  </p>
+                  {transactionForm.items.map((item) => (
+                    <div className="form-grid" key={item.sku}>
+                      <label>
+                        {productNameFor(item.sku)} — จำนวน
+                        <input required type="number" min="1" step="1" value={item.qty}
+                          onChange={(e) => setTransactionForm({ ...transactionForm, items: transactionForm.items.map((current) => current.sku === item.sku ? { ...current, qty: e.target.value } : current) })} />
+                      </label>
+                      <label>
+                        ราคาต่อชิ้น
+                        <input required type="number" min="0" max="99999999.99" step="0.01" value={item.price}
+                          onChange={(e) => setTransactionForm({ ...transactionForm, items: transactionForm.items.map((current) => current.sku === item.sku ? { ...current, price: e.target.value } : current) })} />
+                      </label>
+                    </div>
+                  ))}
                 </div>
                 <div className="modal-foot">
                   <button

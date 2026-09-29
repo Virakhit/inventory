@@ -8,4 +8,8 @@ Next.js frontend for the ASP.NET inventory API in `../inven_api`.
 2. In this folder run `npm install` and `npm run dev`.
 3. Open <http://localhost:3000>.
 
-The frontend proxies `/api/*` to `http://localhost:5126` by default. Set `INVENTORY_API_URL` in `.env.local` if the API uses another origin. The backend stores product price and cost as strings; the frontend sends them in that format. Transaction items have no quantity field in the current API, so each selected product creates one item.
+The frontend has separate URLs for the dashboard (`/`), products (`/products`),
+categories (`/categories`), and transactions (`/transactions`). Refreshing or
+opening any of these URLs directly keeps you on the selected page.
+
+The frontend proxies `/api/*` to `http://localhost:5126` by default. Set `INVENTORY_API_URL` in `.env.local` if the API uses another origin. The backend stores product price and cost as strings; the frontend sends them in that format. Transaction items store a positive integer quantity and a numeric price with two decimal places.

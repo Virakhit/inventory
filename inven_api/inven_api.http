@@ -25,7 +25,7 @@ GET {{host}}/api/products
 POST {{host}}/api/transactions
 Content-Type: application/json
 
-{"type":"IN","date":"2026-09-29T00:00:00Z","reason":"Initial stock","items":[{"sku":"00000000-0000-0000-0000-000000000002","categoryId":"00000000-0000-0000-0000-000000000001"}]}
+{"type":"IN","date":"2026-09-29T00:00:00Z","reason":"Initial stock","items":[{"sku":"00000000-0000-0000-0000-000000000002","categoryId":"00000000-0000-0000-0000-000000000001","qty":2,"price":75.00}]}
 
 ### List transactions
 GET {{host}}/api/transactions

@@ -32,6 +32,8 @@ public class TransactionController(InventoryDbContext db) : ControllerBase
         if (items.Count == 0) return BadRequest("At least one item is required.");
         if (items.Any(x => x.Sku == Guid.Empty || string.IsNullOrWhiteSpace(x.CategoryId)))
             return BadRequest("Each item requires SKU and categoryID.");
+        if (items.Any(x => x.Qty <= 0 || x.Price < 0 || x.Price > 99999999.99m || x.Price != decimal.Round(x.Price, 2)))
+            return BadRequest("Each item requires a positive qty and a price between 0 and 99999999.99 with at most two decimal places.");
         var skus = items.Select(x => x.Sku).Distinct().ToArray();
         if (await db.Products.CountAsync(x => skus.Contains(x.Sku)) != skus.Length)
             return BadRequest("One or more products do not exist.");
@@ -41,7 +43,8 @@ public class TransactionController(InventoryDbContext db) : ControllerBase
             TransactionId = Guid.NewGuid(), Type = input.Type, Date = input.Date, Reason = input.Reason,
             Items = items.ConvertAll(x => new TransactionItem
             {
-                IdtransactionItemId = Guid.NewGuid(), Sku = x.Sku, CategoryId = x.CategoryId
+                IdtransactionItemId = Guid.NewGuid(), Sku = x.Sku, CategoryId = x.CategoryId,
+                Qty = x.Qty, Price = x.Price
             })
         };
         db.Transactions.Add(transaction);
@@ -62,11 +65,11 @@ public class TransactionController(InventoryDbContext db) : ControllerBase
     }
 
     private static TransactionDto ToDto(InventoryTransaction x) => new(x.TransactionId, x.Type, x.Date, x.Reason,
-        [.. x.Items.Select(i => new TransactionItemDto(i.IdtransactionItemId, i.TransactionId, i.Sku, i.CategoryId))]);
+        [.. x.Items.Select(i => new TransactionItemDto(i.IdtransactionItemId, i.TransactionId, i.Sku, i.CategoryId, i.Qty, i.Price))]);
 }
 
-public record TransactionItemInput(Guid Sku, [Required] string CategoryId);
+public record TransactionItemInput(Guid Sku, [Required] string CategoryId, int Qty, decimal Price);
 public record TransactionInput([Required, MinLength(1)] string Type, DateTime Date, string? Reason,
     [Required] List<TransactionItemInput> Items);
-public record TransactionItemDto(Guid IdtransactionItemId, Guid TransactionId, Guid Sku, string CategoryId);
+public record TransactionItemDto(Guid IdtransactionItemId, Guid TransactionId, Guid Sku, string CategoryId, int Qty, decimal Price);
 public record TransactionDto(Guid TransactionId, string Type, DateTime Date, string? Reason, List<TransactionItemDto> Items);
