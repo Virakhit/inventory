@@ -37,7 +37,13 @@ type Transaction = {
   type: string;
   date: string;
   reason: string | null;
-  items: { idtransactionItemId: string; sku: string; categoryId: string; qty: number; price: number }[];
+  items: {
+    idtransactionItemId: string;
+    sku: string;
+    categoryId: string;
+    qty: number;
+    price: number;
+  }[];
 };
 type View = "overview" | "products" | "categories" | "transactions";
 type Dialog = "product" | "category" | "transaction" | null;
@@ -83,13 +89,14 @@ const shortId = (id: string) => id.slice(0, 8).toUpperCase();
 export default function Home() {
   const pathname = usePathname();
   const router = useRouter();
-  const view: View = pathname === "/products"
-    ? "products"
-    : pathname === "/categories"
-      ? "categories"
-      : pathname === "/transactions"
-        ? "transactions"
-        : "overview";
+  const view: View =
+    pathname === "/products"
+      ? "products"
+      : pathname === "/categories"
+        ? "categories"
+        : pathname === "/transactions"
+          ? "transactions"
+          : "overview";
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -256,8 +263,18 @@ export default function Home() {
       setError("เลือกสินค้าอย่างน้อยหนึ่งรายการ");
       return;
     }
-    if (transactionForm.items.some((item) => !Number.isInteger(Number(item.qty)) || Number(item.qty) <= 0 || !/^\d+(\.\d{1,2})?$/.test(item.price) || Number(item.price) > 99999999.99)) {
-      setError("จำนวนต้องเป็นจำนวนเต็มมากกว่า 0 และราคาต้องอยู่ระหว่าง 0 ถึง 99,999,999.99");
+    if (
+      transactionForm.items.some(
+        (item) =>
+          !Number.isInteger(Number(item.qty)) ||
+          Number(item.qty) <= 0 ||
+          !/^\d+(\.\d{1,2})?$/.test(item.price) ||
+          Number(item.price) > 99999999.99,
+      )
+    ) {
+      setError(
+        "จำนวนต้องเป็นจำนวนเต็มมากกว่า 0 และราคาต้องอยู่ระหว่าง 0 ถึง 99,999,999.99",
+      );
       return;
     }
     const items = transactionForm.items.map((item) => ({
@@ -482,7 +499,10 @@ export default function Home() {
                             </span>
                           </div>
                           <div className="activity-meta">
-                            <strong>{t.items.reduce((sum, item) => sum + item.qty, 0)} ชิ้น</strong>
+                            <strong>
+                              {t.items.reduce((sum, item) => sum + item.qty, 0)}{" "}
+                              ชิ้น
+                            </strong>
                             <span>{dateLabel(t.date)}</span>
                           </div>
                         </div>
@@ -751,10 +771,19 @@ export default function Home() {
                               </td>
                               <td>
                                 <div className="items-cell">
-                                  <strong>{t.items.reduce((sum, item) => sum + item.qty, 0)} ชิ้น</strong>
+                                  <strong>
+                                    {t.items.reduce(
+                                      (sum, item) => sum + item.qty,
+                                      0,
+                                    )}{" "}
+                                    ชิ้น
+                                  </strong>
                                   <span>
                                     {t.items
-                                      .map((i) => `${productNameFor(i.sku)} × ${i.qty} (${money(i.price)})`)
+                                      .map(
+                                        (i) =>
+                                          `${productNameFor(i.sku)} × ${i.qty} (${money(i.price)})`,
+                                      )
                                       .join(", ")}
                                   </span>
                                 </div>
@@ -1028,12 +1057,17 @@ export default function Home() {
                         <label key={p.sku} className="picker-option">
                           <input
                             type="checkbox"
-                            checked={transactionForm.items.some((item) => item.sku === p.sku)}
+                            checked={transactionForm.items.some(
+                              (item) => item.sku === p.sku,
+                            )}
                             onChange={(e) =>
                               setTransactionForm({
                                 ...transactionForm,
                                 items: e.target.checked
-                                  ? [...transactionForm.items, { sku: p.sku, qty: "1", price: p.price }]
+                                  ? [
+                                      ...transactionForm.items,
+                                      { sku: p.sku, qty: "1", price: p.price },
+                                    ]
                                   : transactionForm.items.filter(
                                       (item) => item.sku !== p.sku,
                                     ),
@@ -1056,13 +1090,44 @@ export default function Home() {
                     <div className="form-grid" key={item.sku}>
                       <label>
                         {productNameFor(item.sku)} — จำนวน
-                        <input required type="number" min="1" step="1" value={item.qty}
-                          onChange={(e) => setTransactionForm({ ...transactionForm, items: transactionForm.items.map((current) => current.sku === item.sku ? { ...current, qty: e.target.value } : current) })} />
+                        <input
+                          required
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={item.qty}
+                          onChange={(e) =>
+                            setTransactionForm({
+                              ...transactionForm,
+                              items: transactionForm.items.map((current) =>
+                                current.sku === item.sku
+                                  ? { ...current, qty: e.target.value }
+                                  : current,
+                              ),
+                            })
+                          }
+                        />
                       </label>
                       <label>
                         ราคาต่อชิ้น
-                        <input required type="number" min="0" max="99999999.99" step="0.01" value={item.price}
-                          onChange={(e) => setTransactionForm({ ...transactionForm, items: transactionForm.items.map((current) => current.sku === item.sku ? { ...current, price: e.target.value } : current) })} />
+                        <input
+                          required
+                          type="number"
+                          min="0"
+                          max="99999999.99"
+                          step="0.01"
+                          value={item.price}
+                          onChange={(e) =>
+                            setTransactionForm({
+                              ...transactionForm,
+                              items: transactionForm.items.map((current) =>
+                                current.sku === item.sku
+                                  ? { ...current, price: e.target.value }
+                                  : current,
+                              ),
+                            })
+                          }
+                        />
                       </label>
                     </div>
                   ))}
