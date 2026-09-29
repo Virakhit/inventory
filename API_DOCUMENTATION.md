@@ -7,7 +7,7 @@
 | รายการ | ค่า |
 | --- | --- |
 | URL หลัก | `http://localhost:5126` |
-| Header สำหรับ `POST` และ `PUT` | `Content-Type: application/json` |
+| Header สำหรับ `POST`, `PUT` และ `PATCH` | `Content-Type: application/json` |
 | Header สำหรับ `GET` และ `DELETE` | ไม่มีที่จำเป็น |
 
 ระบบยังไม่ต้องใช้รหัสผ่านหรือ `Authorization` header ค่า `{id}` และ `{sku}` ใน URL ให้แทนด้วยรหัสที่ได้จากการสร้างหรือเรียกดูข้อมูล
@@ -23,15 +23,80 @@
 | DELETE | `/api/categories/{id}` | ลบหมวดหมู่ | 204 | 404, 409 |
 | GET | `/api/products` | ดูสินค้าทั้งหมด | 200 | — |
 | GET | `/api/products/{sku}` | ดูสินค้าหนึ่งรายการ | 200 | 404 |
+| GET | `/api/products/low-stock` | ดูสินค้าที่เหลือน้อยกว่า 5 ชิ้น | 200 | — |
 | POST | `/api/products` | เพิ่มสินค้า | 201 | 400 |
 | PUT | `/api/products/{sku}` | แก้ไขสินค้า | 204 | 400, 404 |
 | DELETE | `/api/products/{sku}` | ลบสินค้า | 204 | 404, 409 |
+| PATCH | `/api/stock/adjust` | ปรับจำนวนสต็อกและบันทึกประวัติ | 200 | 400, 404, 409 |
 | GET | `/api/transactions` | ดูรายการเคลื่อนไหวทั้งหมด | 200 | — |
 | GET | `/api/transactions/{id}` | ดูรายการเคลื่อนไหวหนึ่งรายการ | 200 | 404 |
 | POST | `/api/transactions` | บันทึกรายการเคลื่อนไหว | 201 | 400 |
-| DELETE | `/api/transactions/{id}` | ลบรายการเคลื่อนไหว | 204 | 404 |
+| DELETE | `/api/transactions/{id}` | ประวัติห้ามลบ | — | 404, 409 |
 
-`GET` และ `DELETE` ไม่ต้องส่ง Request Body ส่วน `PUT` ต้องส่งข้อมูลใหม่ครบทุกช่องตามตัวอย่าง `204` หมายถึงสำเร็จโดยไม่มี Response Body
+`GET` และ `DELETE` ไม่ต้องส่ง Request Body ส่วน `PUT` ต้องส่งข้อมูลใหม่ครบทุกช่องตามตัวอย่าง `204` หมายถึงสำเร็จโดยไม่มี Response Body จำนวนสต็อกใน `PUT /api/products/{sku}` ต้องเท่าเดิม ให้ใช้ `PATCH /api/stock/adjust` เมื่อต้องการเปลี่ยนจำนวน
+
+## โครงสร้างข้อมูลและความสัมพันธ์
+
+```mermaid
+erDiagram
+    categories ||--o{ products : groups
+    products ||--o{ transactionItems : moves
+    Transactions ||--|{ transactionItems : contains
+    categories { guid categoryID PK
+                 string categoryName }
+    products { guid SKU PK
+               guid categoryID FK
+               string productName
+               string cost
+               string price
+               int qty }
+    Transactions { guid transactionID PK
+                   string type
+                   datetime date
+                   string reason }
+    transactionItems { guid idtransactionItemID PK
+                       guid transactionID FK
+                       guid SKU FK
+                       int qty }
+```
+
+หนึ่งหมวดหมู่มีสินค้าได้หลายชิ้น สินค้าหนึ่งรายการมีประวัติได้หลายรายการ และรายการเคลื่อนไหวหนึ่งรายการมีสินค้าได้หลายรายการ `SKU` เป็นรหัสสินค้าแบบ GUID ที่ไม่ซ้ำกันและเป็น Primary Key
+
+## ปรับสต็อกโดยตรง
+
+**Request:** `PATCH /api/stock/adjust` พร้อม `Content-Type: application/json`
+
+```json
+{ "productId": "22222222-2222-2222-2222-222222222222", "quantity": -5, "reason": "เบิกไปใช้งาน" }
+```
+
+`quantity` เป็นจำนวนเต็มมีเครื่องหมาย: บวกคือรับเข้า ลบคือจ่ายออก และห้ามเป็นศูนย์ การปรับยอดและบันทึกประวัติอยู่ใน database transaction เดียวกัน
+
+**Success — 200 OK:**
+
+```json
+{ "productId": "22222222-2222-2222-2222-222222222222", "quantity": 5 }
+```
+
+**Error — 400 Bad Request:** ค่า quantity เป็นศูนย์หรือไม่ได้ระบุเหตุผล
+
+```json
+"Provide productId, a nonzero quantity, and a reason."
+```
+
+**Error — 404 Not Found:** ไม่พบสินค้า
+
+```json
+"Product does not exist."
+```
+
+**Error — 409 Conflict:** จำนวนที่จ่ายออกมากกว่าคงเหลือ
+
+```json
+"Insufficient stock or stock quantity exceeds the allowed range."
+```
+
+`GET /api/products/low-stock` ส่ง `200 OK` เป็น array ของสินค้าในรูปแบบเดียวกับ `GET /api/products` โดยเลือก `qty < 5` รวมสินค้าที่เหลือศูนย์
 
 ## ตัวอย่าง Request และ Response
 
@@ -67,6 +132,7 @@
 {
   "categoryId": "11111111-1111-1111-1111-111111111111",
   "productName": "สมุด",
+  "qty": 10,
   "price": "75.00",
   "cost": "50.00"
 }
@@ -79,12 +145,13 @@
   "sku": "22222222-2222-2222-2222-222222222222",
   "categoryId": "11111111-1111-1111-1111-111111111111",
   "productName": "สมุด",
+  "qty": 10,
   "price": "75.00",
   "cost": "50.00"
 }
 ```
 
-`GET /api/products/{sku}` ส่งข้อมูลรูปแบบเดียวกัน ส่วน `GET /api/products` ส่งเป็นรายการ หากไม่มีข้อมูลจะได้ `[]` ราคาขายและต้นทุนต้องส่งเป็นข้อความในเครื่องหมายคำพูด และ `categoryId` ใช้ `null` ได้
+`GET /api/products/{sku}` ส่งข้อมูลรูปแบบเดียวกัน ส่วน `GET /api/products` ส่งเป็นรายการ หากไม่มีข้อมูลจะได้ `[]` `qty` เป็นจำนวนเต็มตั้งแต่ 0 ขึ้นไป ราคาขายและต้นทุนต้องส่งเป็นข้อความในเครื่องหมายคำพูด และ `categoryId` ใช้ `null` ได้ เมื่อสร้างสินค้าด้วย `qty > 0` ระบบจะบันทึกประวัติรับเข้าเริ่มต้นด้วย
 
 **Error — 400 Bad Request:** ระบุหมวดหมู่ที่ไม่มีในระบบ
 
@@ -118,7 +185,7 @@
 }
 ```
 
-ใช้ `IN` สำหรับรับเข้า และ `OUT` สำหรับจ่ายออกในตัวอย่างนี้ `items` ต้องมีอย่างน้อยหนึ่งรายการ โดยแต่ละรายการต้องมี `sku`, `categoryId`, `qty` (จำนวนเต็มมากกว่า 0) และ `price` (0 ถึง 99,999,999.99)
+ใช้ `IN` สำหรับรับเข้า และ `OUT` สำหรับจ่ายออก `reason` ต้องระบุ `items` ต้องมีอย่างน้อยหนึ่งรายการ โดยแต่ละรายการต้องมี `sku`, `categoryId`, `qty` (จำนวนเต็มมากกว่า 0) และ `price` (0 ถึง 99,999,999.99) ระบบกำหนด `date` เป็นเวลาบันทึกของเซิร์ฟเวอร์และปรับสต็อกพร้อมบันทึกประวัติใน database transaction เดียวกัน
 
 **Success — 201 Created** (`Location` ชี้ไปยังรายการที่สร้าง)
 

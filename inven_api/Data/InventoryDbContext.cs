@@ -28,6 +28,7 @@ public class InventoryDbContext(DbContextOptions<InventoryDbContext> options) : 
             entity.Property(x => x.ProductName).HasColumnName("productName").IsRequired();
             entity.Property(x => x.Price).HasColumnName("price").IsRequired();
             entity.Property(x => x.Cost).HasColumnName("cost").IsRequired();
+            entity.Property(x => x.Qty).HasColumnName("qty").IsRequired();
             entity.HasOne(x => x.Category).WithMany(x => x.Products).HasForeignKey(x => x.CategoryId);
         });
         modelBuilder.Entity<InventoryTransaction>(entity =>

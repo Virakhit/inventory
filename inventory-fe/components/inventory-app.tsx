@@ -31,6 +31,7 @@ type Product = {
   productName: string;
   price: string;
   cost: string;
+  qty: number;
 };
 type Transaction = {
   transactionId: string;
@@ -113,6 +114,7 @@ export default function Home() {
     categoryId: "",
     price: "",
     cost: "",
+    qty: "0",
   });
   const [categoryName, setCategoryName] = useState("");
   const [transactionForm, setTransactionForm] = useState({
@@ -174,6 +176,7 @@ export default function Home() {
   const sortedTransactions = [...transactions].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
+  const lowStock = products.filter((p) => p.qty < 5);
   const stockIn = transactions
     .filter((t) => t.type.toUpperCase() === "IN")
     .reduce((n, t) => n + t.items.reduce((sum, item) => sum + item.qty, 0), 0);
@@ -190,8 +193,9 @@ export default function Home() {
             categoryId: product.categoryId || "",
             price: product.price,
             cost: product.cost,
+            qty: String(product.qty),
           }
-        : { productName: "", categoryId: "", price: "", cost: "" },
+        : { productName: "", categoryId: "", price: "", cost: "", qty: "0" },
     );
     setError("");
     setDialog("product");
@@ -238,6 +242,7 @@ export default function Home() {
           body: JSON.stringify({
             ...productForm,
             categoryId: productForm.categoryId || null,
+            qty: Number(productForm.qty),
           }),
         }),
       editingProduct ? "แก้ไขสินค้าแล้ว" : "เพิ่มสินค้าแล้ว",
@@ -405,8 +410,8 @@ export default function Home() {
                 <div>
                   <div className="eyebrow">ภาพรวม / DASHBOARD</div>
                   <h1>
-                    จัดการสต็อกอย่างมั่นใจ
-                    <span className="heading-period">.</span>
+                    Dashboard
+                    {/* <span className="heading-period">.</span> */}
                   </h1>
                   <p>ภาพรวมสินค้าและความเคลื่อนไหวล่าสุดในคลังของคุณ</p>
                 </div>
@@ -430,7 +435,7 @@ export default function Home() {
                 <div className="stat-card">
                   <div className="stat-top">
                     <span>หมวดหมู่</span>
-                    <div className="stat-icon blue">
+                    <div className="stat-icon violet">
                       <FolderClosed size={20} />
                     </div>
                   </div>
@@ -451,6 +456,11 @@ export default function Home() {
                     {stockIn} ชิ้นรับเข้า <span className="divider-dot">·</span>{" "}
                     {stockOut} ชิ้นจ่ายออก
                   </div>
+                </div>
+                <div className="stat-card">
+                  <div className="stat-top"><span>สินค้าใกล้หมด</span><div className="stat-icon orange"><CircleAlert size={20} /></div></div>
+                  <strong>{loading ? "—" : lowStock.length}</strong>
+                  <div className="stat-foot">คงเหลือน้อยกว่า 5 ชิ้น</div>
                 </div>
               </div>
               <div className="overview-grid">
@@ -593,7 +603,7 @@ export default function Home() {
                   </div>
                   <h1>
                     {title}
-                    <span className="heading-period">.</span>
+                    {/* <span className="heading-period">.</span> */}
                   </h1>
                   <p>
                     {view === "products"
@@ -789,21 +799,7 @@ export default function Home() {
                                 </div>
                               </td>
                               <td className="muted">{dateLabel(t.date)}</td>
-                              <td>
-                                <div className="row-actions">
-                                  <button
-                                    title="ลบรายการ"
-                                    onClick={() =>
-                                      remove(
-                                        `transactions/${t.transactionId}`,
-                                        `transaction #${shortId(t.transactionId)}`,
-                                      )
-                                    }
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
-                              </td>
+                              <td className="muted">เก็บเป็นประวัติ</td>
                             </tr>
                           ))}
                       </tbody>
@@ -918,6 +914,20 @@ export default function Home() {
                   </label>
                   <div className="form-grid">
                     <label>
+                      จำนวนเริ่มต้น {editingProduct && "(ปรับผ่านรายการเคลื่อนไหว)"}
+                      <input
+                        required
+                        disabled={!!editingProduct}
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={productForm.qty}
+                        onChange={(e) =>
+                          setProductForm({ ...productForm, qty: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
                       ราคาขาย
                       <input
                         required
@@ -1019,24 +1029,11 @@ export default function Home() {
                         <ChevronDown size={16} />
                       </div>
                     </label>
-                    <label>
-                      วันที่
-                      <input
-                        required
-                        type="date"
-                        value={transactionForm.date}
-                        onChange={(e) =>
-                          setTransactionForm({
-                            ...transactionForm,
-                            date: e.target.value,
-                          })
-                        }
-                      />
-                    </label>
                   </div>
                   <label>
-                    หมายเหตุ <span className="optional">(ไม่บังคับ)</span>
+                    เหตุผล
                     <input
+                      required
                       value={transactionForm.reason}
                       onChange={(e) =>
                         setTransactionForm({
@@ -1206,6 +1203,7 @@ function ProductTable({
             <tr>
               <th>สินค้า</th>
               <th>หมวดหมู่</th>
+              <th>จำนวน</th>
               <th>ราคาขาย</th>
               <th>ต้นทุน</th>
               <th>SKU</th>
@@ -1229,6 +1227,7 @@ function ProductTable({
                       ?.categoryName || "ไม่ระบุหมวดหมู่"}
                   </span>
                 </td>
+                <td className="numeric strong">{p.qty}</td>
                 <td className="numeric strong">{money(p.price)}</td>
                 <td className="numeric muted">{money(p.cost)}</td>
                 <td className="mono muted">{shortId(p.sku)}</td>

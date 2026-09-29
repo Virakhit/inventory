@@ -9,7 +9,7 @@ async function proxy(
   const { path } = await context.params;
   if (
     !path.length ||
-    !["products", "categories", "transactions"].includes(path[0]) ||
+    !["products", "categories", "transactions", "stock"].includes(path[0]) ||
     path.length > 2
   ) {
     return NextResponse.json({ message: "Unknown API route" }, { status: 404 });
@@ -45,4 +45,4 @@ async function proxy(
   }
 }
 
-export { proxy as GET, proxy as POST, proxy as PUT, proxy as DELETE };
+export { proxy as GET, proxy as POST, proxy as PUT, proxy as PATCH, proxy as DELETE };
