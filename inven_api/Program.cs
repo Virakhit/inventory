@@ -17,7 +17,8 @@ builder.Services.AddSwaggerGen(options =>
     options.IncludeXmlComments(xmlPath);
 });
 builder.Services.AddDbContext<InventoryDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Inventory") ?? "Data Source=inventory.db"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("Inventory")
+        ?? throw new InvalidOperationException("Connection string 'Inventory' is not configured.")));
 
 var app = builder.Build();
 app.UseSwagger();

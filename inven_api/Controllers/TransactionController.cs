@@ -39,10 +39,10 @@ public class TransactionController(InventoryDbContext db) : ControllerBase
         var transaction = new InventoryTransaction
         {
             TransactionId = Guid.NewGuid(), Type = input.Type, Date = input.Date, Reason = input.Reason,
-            Items = items.Select(x => new TransactionItem
+            Items = items.ConvertAll(x => new TransactionItem
             {
                 IdtransactionItemId = Guid.NewGuid(), Sku = x.Sku, CategoryId = x.CategoryId
-            }).ToList()
+            })
         };
         db.Transactions.Add(transaction);
         await db.SaveChangesAsync();
@@ -62,7 +62,7 @@ public class TransactionController(InventoryDbContext db) : ControllerBase
     }
 
     private static TransactionDto ToDto(InventoryTransaction x) => new(x.TransactionId, x.Type, x.Date, x.Reason,
-        x.Items.Select(i => new TransactionItemDto(i.IdtransactionItemId, i.TransactionId, i.Sku, i.CategoryId)).ToList());
+        [.. x.Items.Select(i => new TransactionItemDto(i.IdtransactionItemId, i.TransactionId, i.Sku, i.CategoryId))]);
 }
 
 public record TransactionItemInput(Guid Sku, [Required] string CategoryId);
