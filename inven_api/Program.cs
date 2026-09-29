@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using inven_api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi;
@@ -27,4 +28,22 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<InventoryDbContext>().Database.EnsureCreated();
 
 app.MapControllers();
+if (app.Environment.IsDevelopment())
+{
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        var address = app.Urls.FirstOrDefault(url => url.StartsWith("http://localhost:", StringComparison.OrdinalIgnoreCase));
+        if (address is null)
+            return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo($"{address.TrimEnd('/')}/swagger") { UseShellExecute = true });
+        }
+        catch (Exception exception)
+        {
+            app.Logger.LogWarning(exception, "Could not open Swagger UI in the browser.");
+        }
+    });
+}
 app.Run();
